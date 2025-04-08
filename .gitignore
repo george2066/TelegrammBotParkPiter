@@ -1,4 +1,4 @@
 .venv
 __pycache__
 .idea
-app/secrets.py
+secrets.py

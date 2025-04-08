@@ -2,7 +2,7 @@ import sys
 import logging
 import secrets
 
-from qr_reader import qrcode_func
+from handlers import qrcode_func
 from hash import get_parking_payment
 from io import BytesIO
 
@@ -31,24 +31,33 @@ dp.include_router(router_reg)
 photo_ids = []
 
 
-def ticket_kb():
-    keyboard=ReplyKeyboardMarkup(keyboard =[
-        [KeyboardButton(text='Ввести номер')]
-    ], resize_keyboard=True)
-    return keyboard
 
-def sendPhoto_kb():
-    Keyboard = ReplyKeyboardMarkup(keyboard=[
-        [InlineKeyboardButton(text='Отправить фото', callback_data='sendPhoto')]
-    ])
-    return Keyboard
 
 
 @dp.message(CommandStart())
 async def check_payment(message: Message):
-    # Просим пользователя ввести ticket_id
-    await message.answer("Пожалуйста, введите код для проверки оплаты")
-    await message.delete()
+    kb = [
+        [
+            KeyboardButton(text="Показать ТАРИФ"),
+            KeyboardButton(text="Показать ЗАДОЛЖЕННОСТЬ")
+        ],
+        [KeyboardButton(text="Оплатить ЗАДОЛЖЕННОСТЬ")]
+    ]
+    keyboard = ReplyKeyboardMarkup(keyboard=kb)
+    await message.answer(f"Добро пожаловать!\nВыберете опцию:", reply_markup=keyboard)
+
+@dp.message(F.text == "Показать ТАРИФ")
+async def show_tariff(message: Message):
+    await message.reply("Отличный выбор!")
+
+@dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
+async def show_arrears(message: Message):
+    await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
+
+@dp.message(F.text == "Оплатить ЗАДОЛЖЕННОСТЬ")
+async def pay_arrears(message: Message):
+    await message.reply("Отличный выбор!")
+
 
 @dp.message(lambda message: message.text)
 async def process_ticket_id(message: Message):
@@ -91,4 +100,7 @@ async def main() -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print("Бот остановлен пользователем")
