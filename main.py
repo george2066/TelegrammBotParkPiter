@@ -28,12 +28,6 @@ router_reg = Router()
 dp.include_router(router_reg)
 
 
-photo_ids = []
-
-
-
-
-
 @dp.message(CommandStart())
 async def check_payment(message: Message):
     kb = [
@@ -48,7 +42,13 @@ async def check_payment(message: Message):
 
 @dp.message(F.text == "Показать ТАРИФ")
 async def show_tariff(message: Message):
-    await message.reply("Отличный выбор!")
+    await message.reply('''
+Тарифы:
+        
+Цена ЧАС: ... руб.
+Цена ДЕНЬ: ... руб.
+Цена МЕСЯЦ: ... руб.
+    ''')
 
 @dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
 async def show_arrears(message: Message):
@@ -56,17 +56,14 @@ async def show_arrears(message: Message):
 
 @dp.message(F.text == "Оплатить ЗАДОЛЖЕННОСТЬ")
 async def pay_arrears(message: Message):
-    await message.reply("Отличный выбор!")
+    await message.reply("Пожалуйста, введите код для оплаты или пришлите QR-код вашего талона.")
 
 
 @dp.message(lambda message: message.text)
 async def process_ticket_id(message: Message):
     ticket_id = message.text
     try:
-        # Вызываем функцию с полученным ticket_id
         amount = get_parking_payment(ticket_id)
-
-        # Отправляем результат пользователю
         await message.answer(f"Сумма оплаты для кода, который вы ввели: {amount} руб.")
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
@@ -82,7 +79,6 @@ async def process_photo(message: Message):
         file = await bot.get_file(file_id)
         file_path = file.file_path
         image_data = await bot.download_file(file_path)
-        # Создаем объект Image из загруженных данных
         image = Image.open(BytesIO(image_data.getvalue()))
         link =  qrcode_func(image)
         await message.answer(f"Сумма оплаты для кода, который вы ввели: {link} руб.")
@@ -103,4 +99,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
-        print("Бот остановлен пользователем")
+        print("Бот остановлен разработчиком")
