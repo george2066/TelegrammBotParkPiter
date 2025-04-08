@@ -1,20 +1,15 @@
 import sys
 import logging
 import secrets
-
-from handlers import qrcode_func
-from hash import get_parking_payment
-from io import BytesIO
-
 import PIL.Image as Image
 import asyncio
-import json.scanner
 
-from aiogram import Bot, Dispatcher, Router
-from aiogram import F
+from handlers import read_QR, start
+from hash import get_parking_payment
+from io import BytesIO
+from aiogram import Bot, Dispatcher, Router, F
 from aiogram.filters import CommandStart
-from aiogram.types import Message
-from aiogram.types import InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup
+from aiogram.types import Message, KeyboardButton, ReplyKeyboardMarkup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
@@ -27,48 +22,14 @@ dp = Dispatcher(storage=MemoryStorage())
 router_reg = Router()
 dp.include_router(router_reg)
 
-
 @dp.message(CommandStart())
 async def check_payment(message: Message):
     kb = [
-        [
-            KeyboardButton(text="Показать ТАРИФ"),
-            KeyboardButton(text="Показать ЗАДОЛЖЕННОСТЬ")
-        ],
-        [KeyboardButton(text="Оплатить ЗАДОЛЖЕННОСТЬ")]
+        [KeyboardButton(text="Показать ТАРИФ")],
+        [KeyboardButton(text="Показать ЗАДОЛЖЕННОСТЬ")]
     ]
     keyboard = ReplyKeyboardMarkup(keyboard=kb)
-    await message.answer(f"Добро пожаловать!\nВыберете опцию:", reply_markup=keyboard)
-
-@dp.message(F.text == "Показать ТАРИФ")
-async def show_tariff(message: Message):
-    await message.reply('''
-Тарифы:
-        
-Цена ЧАС: ... руб.
-Цена ДЕНЬ: ... руб.
-Цена МЕСЯЦ: ... руб.
-    ''')
-
-@dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
-async def show_arrears(message: Message):
-    await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
-
-@dp.message(F.text == "Оплатить ЗАДОЛЖЕННОСТЬ")
-async def pay_arrears(message: Message):
-    await message.reply("Пожалуйста, введите код для оплаты или пришлите QR-код вашего талона.")
-
-
-@dp.message(lambda message: message.text)
-async def process_ticket_id(message: Message):
-    ticket_id = message.text
-    try:
-        amount = get_parking_payment(ticket_id)
-        await message.answer(f"Сумма оплаты для кода, который вы ввели: {amount} руб.")
-    except Exception as e:
-        await message.answer(f"Произошла ошибка: {str(e)}")
-        
-
+    await message.answer(start(), reply_markup=keyboard)
 
 @router_reg.message(F.photo)
 async def process_photo(message: Message):
@@ -80,15 +41,42 @@ async def process_photo(message: Message):
         file_path = file.file_path
         image_data = await bot.download_file(file_path)
         image = Image.open(BytesIO(image_data.getvalue()))
-        link =  qrcode_func(image)
-        await message.answer(f"Сумма оплаты для кода, который вы ввели: {link} руб.")
+        link =  read_QR(image)
+        kb = [
+            [KeyboardButton(text="Оплатить")],
+            [KeyboardButton(text="Назад")]
+        ]
+        keyboard = ReplyKeyboardMarkup(keyboard=kb)
+        await message.answer(f"Сумма оплаты для кода, который вы ввели: {link} руб.", reply_markup=keyboard)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
 
+@dp.message(lambda message: message.text)
+async def process_ticket_id(message: Message):
+    ticket_id = message.text
+    try:
+        amount = get_parking_payment(ticket_id)
+        await message.answer(f"Сумма оплаты для кода, который вы ввели: {amount} руб.")
+    except Exception as e:
+        await message.answer(f"Произошла ошибка: {str(e)}")
 
+@dp.message(F.text == "Показать ТАРИФ")
+async def show_tariff(message: Message):
+    await message.reply('''
+Тарифы:
 
+Цена ЧАС: ... руб.
+Цена ДЕНЬ: ... руб.
+Цена МЕСЯЦ: ... руб.
+    ''')
 
+@dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
+async def show_arrears(message: Message):
+    await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
 
+@dp.message(F.text == "Назад")
+async def back_handler(message: Message) -> None:
+    await check_payment(message)
 
 async def main() -> None:
     bot = Bot(token=secrets.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))

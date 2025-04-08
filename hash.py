@@ -1,5 +1,4 @@
 import hashlib
-import json.scanner
 import requests
 
 def get_parking_payment(ticket_id: str, secret: str = '123', api_base: str = None) -> float:
