@@ -36,7 +36,7 @@ async def check_payment(message: Message):
         [KeyboardButton(text="Показать ЗАДОЛЖЕННОСТЬ")]
     ]
     keyboard = ReplyKeyboardMarkup(keyboard=kb)
-    await message.answer(f"Добро пожаловать!\nВыберете опцию:", reply_markup=keyboard)
+    await message.answer(f"{'Добро пожаловать!\n' if message.text != 'Назад' else ''}Выберете опцию:", reply_markup=keyboard)
 
 
 @router_reg.message(F.photo)
