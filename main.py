@@ -25,8 +25,19 @@ logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=secrets.TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
-router_reg = Router()
-dp.include_router(router_reg)
+
+router_check_payment = Router()
+router_process_photo = Router()
+router_back_handler = Router()
+router_show_tariff = Router()
+router_show_arrears = Router()
+router_process_ticket_id = Router()
+
+dp.include_router(router_process_photo)
+dp.include_router(router_back_handler)
+dp.include_router(router_show_tariff)
+dp.include_router(router_show_arrears)
+dp.include_router(router_process_ticket_id)
 
 
 @dp.message(CommandStart())
@@ -38,11 +49,15 @@ async def check_payment(message: Message):
     keyboard = ReplyKeyboardMarkup(keyboard=kb)
     await message.answer(f"{'Добро пожаловать!\n' if message.text != 'Назад' else ''}Выберете опцию:", reply_markup=keyboard)
 
-
-@router_reg.message(F.photo)
+@dp.message(F.photo)
 async def process_photo(message: Message):
     photo_data = message.photo[-1]
     file_id = photo_data.file_id
+    kb = [
+        [KeyboardButton(text="Оплатить")],
+        [KeyboardButton(text="Назад")]
+    ]
+    keyboard = ReplyKeyboardMarkup(keyboard=kb)
 
     try:
         file = await bot.get_file(file_id)
@@ -50,21 +65,13 @@ async def process_photo(message: Message):
         image_data = await bot.download_file(file_path)
         image = Image.open(BytesIO(image_data.getvalue()))
         link =  read_QR(image)
-        kb = [
-            [KeyboardButton(text="Оплатить")],
-            [KeyboardButton(text="Назад")]
-        ]
-        keyboard = ReplyKeyboardMarkup(keyboard=kb)
         await message.answer(f"Сумма оплаты для кода, который вы ввели: {link} руб.", reply_markup=keyboard)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
 
-
 @dp.message(F.text == "Назад")
 async def back_handler(message: Message) -> None:
     await check_payment(message)
-
-
 
 @dp.message(F.text == "Показать ТАРИФ")
 async def show_tariff(message: Message):
@@ -80,8 +87,7 @@ async def show_tariff(message: Message):
 async def show_arrears(message: Message):
     await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
 
-
-@dp.message(lambda message: message.text)
+@dp.message(F.text)
 async def process_ticket_id(message: Message):
     ticket_id = message.text
     try:
@@ -89,14 +95,6 @@ async def process_ticket_id(message: Message):
         await message.answer(f"Сумма оплаты для кода, который вы ввели: {amount} руб.")
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
-
-
-
-
-
-
-
-
 
 
 async def main() -> None:

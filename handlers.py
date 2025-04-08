@@ -2,9 +2,6 @@ from PIL import Image
 from pyzbar.pyzbar import decode
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
-def start():
-    return f'Добро пожаловать!\nВыберете опцию:'
-
 def ticket_kb():
     keyboard=ReplyKeyboardMarkup(keyboard =[
         [KeyboardButton(text='Ввести номер')]
@@ -14,7 +11,7 @@ def ticket_kb():
 def sendPhoto_kb():
     pass
 
-def read_QR(image: Image.Image) -> str:
+def read_link_QR(image: Image.Image) -> str:
     decoded_objects = decode(image)
     link = None
     for obj in decoded_objects:
