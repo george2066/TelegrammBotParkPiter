@@ -1,12 +1,12 @@
 [project]
-name = "tg-bot-parking-pay"
+name = "telegrammbotparkpiter"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "george2066"}
+    {name = "george2066",email = "george2066@yandex.ru"}
 ]
 readme = "README.md"
-requires-python = ">=3.9,<=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "opencv-python (>=4.11.0.86,<5.0.0.0)",
     "qreader (>=3.16,<4.0)",

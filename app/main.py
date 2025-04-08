@@ -2,39 +2,22 @@ import sys
 import logging
 import secrets
 
-from Qrreader import qrcode_func
+from qr_reader import qrcode_func
 from hash import get_parking_payment
 from io import BytesIO
 
 import PIL.Image as Image
 import asyncio
 import json.scanner
-import requests
 
-from aiogram import Bot, Dispatcher, FlagGenerator, Router
-from aiogram import MagicFilter
+from aiogram import Bot, Dispatcher, Router
 from aiogram import F
-from aiogram.filters import (
-    Command,
-    CommandStart,
-    ExceptionMessageFilter,
-    ExceptionTypeFilter,
-)
-from aiogram.types import BotCommand, CallbackQuery, Chat, Dice, Poll, TelegramObject, Message, Invoice, Document, File
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup,\
-    KeyboardButton, ReplyKeyboardRemove, ReplyKeyboardMarkup
-from aiogram.fsm.storage.base import BaseStorage, BaseEventIsolation, StorageKey, State, Union, AsyncGenerator
+from aiogram.filters import CommandStart
+from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, KeyboardButton, ReplyKeyboardMarkup
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.utils.callback_answer import CallbackAnswerMiddleware
-from aiogram.types.callback_query import CallbackQuery
-from aiogram.types.user import User
 from aiogram.enums import ParseMode
-from aiogram.utils.chat_action import ChatActionSender
 from aiogram.client.default import DefaultBotProperties
-from aiogram import types
-from aiogram.utils.chat_action import ChatActionSender
 
 
 logging.basicConfig(level=logging.INFO)
@@ -103,7 +86,7 @@ async def process_photo(message: Message):
 
 
 async def main() -> None:
-    bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    bot = Bot(token=secrets.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
