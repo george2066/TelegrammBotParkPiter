@@ -6,7 +6,7 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from bs4 import BeautifulSoup
 
 
-def  __parsing_site__(link):
+def  parsing_site(link):
     response = requests.get(link)
     soup = BeautifulSoup(response.text, 'html.parser')
     trs = soup.find_all('tr')
@@ -17,7 +17,7 @@ def  __parsing_site__(link):
     string += '\n' + link
     return string
 
-def __if_exist_trs__(link):
+def exist_trs(link):
     response = requests.get(link)
     soup = BeautifulSoup(response.text, 'html.parser')
     trs = soup.find_all('tr')
@@ -38,7 +38,17 @@ def read_QR(image: Image.Image) -> str:
     link = None
     for obj in decoded_objects:
         link = obj.data.decode('utf-8')
-    return __parsing_site__(link)
+    return parsing_site(link)
+
+def get_link(ticket_id):
+    base_url = 'http://195.239.22.157:48123/pub/pay?code='
+    link = base_url + f'[{ticket_id.upper()}]'
+    if exist_trs(link):
+        return link
+    else:
+        base_url = 'http://5.17.29.108:88/pub/pay?code='
+        link = base_url + f'[{ticket_id.upper()}]'
+        return link
 
 
 def get_parking_payment(ticket_id: str, secret: str = '123', api_base: str = None) -> float:
@@ -58,15 +68,11 @@ def get_parking_payment(ticket_id: str, secret: str = '123', api_base: str = Non
         ConnectionError: Если возникла ошибка соединения
     """
     try:
-        base_url = api_base or 'http://5.17.29.108:88/pub/pay?code='
-        link = base_url + f'[{ticket_id.upper()}]'
-        if __if_exist_trs__(link):
-            string = __parsing_site__(link)
-            for cost in string.split('\n'):
-                if 'руб' in cost:
-                    string = cost
-                    break
-            return string + '\n' + '\n' + link
+        link = get_link(ticket_id)
+        if exist_trs(link):
+            string = parsing_site(link)
+
+            return string
         return 'Неверный идентификатор талона.\nПроверьте идентификатор талона и перепишите его сюда.'
 
     except requests.RequestException as e:
