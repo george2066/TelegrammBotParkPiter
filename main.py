@@ -65,7 +65,7 @@ async def process_photo(message: Message):
         image_data = await bot.download_file(file_path)
         image = Image.open(BytesIO(image_data.getvalue()))
         link =  read_QR(image)
-        await message.answer(f"Сумма оплаты для кода, который вы ввели: {link} руб.", reply_markup=keyboard)
+        await message.answer(link, reply_markup=keyboard)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
 
