@@ -3,8 +3,7 @@ import logging
 
 import secrets
 
-from handlers import read_QR
-from hash import get_parking_payment
+from handlers import read_QR, get_parking_payment
 from io import BytesIO
 
 import PIL.Image as Image
@@ -26,19 +25,6 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=secrets.TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-router_check_payment = Router()
-router_process_photo = Router()
-router_back_handler = Router()
-router_show_tariff = Router()
-router_show_arrears = Router()
-router_process_ticket_id = Router()
-
-dp.include_router(router_process_photo)
-dp.include_router(router_back_handler)
-dp.include_router(router_show_tariff)
-dp.include_router(router_show_arrears)
-dp.include_router(router_process_ticket_id)
-
 
 @dp.message(CommandStart())
 async def check_payment(message: Message):
@@ -47,7 +33,26 @@ async def check_payment(message: Message):
         [KeyboardButton(text="Показать ЗАДОЛЖЕННОСТЬ")]
     ]
     keyboard = ReplyKeyboardMarkup(keyboard=kb)
-    await message.answer(f"{'Добро пожаловать!\n' if message.text != 'Назад' else ''}Выберете опцию:", reply_markup=keyboard)
+    await message.answer(f"{'Добро пожаловать!\n' if message.text == '/start' else ''}Выберете опцию:", reply_markup=keyboard)
+
+@dp.message(F.text == "Назад")
+async def back_handler(message: Message) -> None:
+    await check_payment(message)
+
+@dp.message(F.text == "Показать ТАРИФ")
+async def show_tariff(message: Message):
+    await message.reply('''
+Тарифы:
+        
+Цена ЧАС: ... руб.
+Цена ДЕНЬ: ... руб.
+Цена МЕСЯЦ: ... руб.
+    ''')
+
+@dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
+async def show_arrears(message: Message):
+    await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
+
 
 @dp.message(F.photo)
 async def process_photo(message: Message):
@@ -69,30 +74,13 @@ async def process_photo(message: Message):
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
 
-@dp.message(F.text == "Назад")
-async def back_handler(message: Message) -> None:
-    await check_payment(message)
-
-@dp.message(F.text == "Показать ТАРИФ")
-async def show_tariff(message: Message):
-    await message.reply('''
-Тарифы:
-        
-Цена ЧАС: ... руб.
-Цена ДЕНЬ: ... руб.
-Цена МЕСЯЦ: ... руб.
-    ''')
-
-@dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
-async def show_arrears(message: Message):
-    await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
-
 @dp.message(F.text)
 async def process_ticket_id(message: Message):
     ticket_id = message.text
     try:
         amount = get_parking_payment(ticket_id)
-        await message.answer(f"Сумма оплаты для кода, который вы ввели: {amount} руб.")
+        await message.answer(amount)
+        await check_payment(message)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
 
