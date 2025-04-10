@@ -17,6 +17,28 @@ client.close()
 
 json_error = 'Неверный идентификатор талона.\nПроверьте идентификатор талона и перепишите его сюда.'
 
+def get_JSON(link):
+    try:
+        json_data = requests.get(link).json()
+        return json_data
+    except JSONDecodeError as e:
+        return json_error
+def get_link_JSON(ticket_id):
+    secret = '123'
+    data = 'ticket_id=' + ticket_id.upper() + '&' + secret
+    hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
+    link = f'http://192.168.1.145:81/parking/parkapp/invoice?ticket_id={ticket_id}&hash={hash_SHA1}'
+    return link
+def get_link_for_payed(ticket_id):
+    json_data = get_JSON(get_link_JSON(ticket_id))
+    secret = '123'
+    link = 'http://192.168.1.145:81/parking/parkapp/invoice'
+    amount = json_data['amount']
+    data = f'amount={amount}&ticket_id={ticket_id}&secret={secret}'
+    hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
+    data = f'?amount={amount}&ticket_id={ticket_id}&hash={hash_SHA1}'
+    link += data
+    return link
 
 def parsing_site(link):
     response = requests.get(link)
@@ -60,7 +82,7 @@ def get_link(ticket_id):
 def free_tariff(ticket_id):
     trs = BeautifulSoup(requests.get(get_link(ticket_id)).text, 'html.parser').find_all('tr')
     return any('Бесплатное время' in tr.text for tr in trs)
-def get_parking(ticket_id: str) -> float:
+def get_parking(ticket_id: str):
     """
     Получает сумму оплаты парковки по ticket_id
 
@@ -95,27 +117,4 @@ def get_amount(link):
         if 'руб' in i:
             return int(''.join(([digit for digit in i if digit.isdigit()])))
     return 'У вас бесплатная парковка.'
-def get_link_for_payed(ticket_id):
-    json_data = get_JSON(get_link_JSON(ticket_id))
-    secret = '123'
-    link = 'http://192.168.1.145:81/parking/parkapp/invoice'
-    amount = json_data['amount']
-    data = f'amount={amount}&ticket_id={ticket_id}&secret={secret}'
-    hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
-    data = f'?amount={amount}&ticket_id={ticket_id}&hash={hash_SHA1}'
-    link += data
-    return link
 
-def get_JSON(link):
-    try:
-        json_data = requests.get(link).json()
-        return json_data
-    except JSONDecodeError as e:
-        return json_error
-
-def get_link_JSON(ticket_id):
-    secret = '123'
-    data = 'ticket_id=' + ticket_id.upper() + '&' + secret
-    hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
-    link = f'http://192.168.1.145:81/parking/parkapp/invoice?ticket_id={ticket_id}&hash={hash_SHA1}'
-    return link
