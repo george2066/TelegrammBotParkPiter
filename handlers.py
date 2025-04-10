@@ -87,10 +87,14 @@ def get_amount(link):
             return int(''.join(([digit for digit in i if digit.isdigit()])))
     return 'У вас бесплатная парковка.'
 def get_link_for_payed(ticket_id):
-    link = 'http://195.239.22.157:48123/parking/parkapp'
-    amount = get_amount(get_link(ticket_id))
-    hash_value = hash(ticket_id)
-    link += f'/payment?ticket_id=[{ticket_id}]&amount={amount}&hash={hash_value}'
+    json_data = get_JSON(ticket_id)
+    secret = '123'
+    link = 'http://192.168.1.145:81/parking/parkapp/invoice'
+    amount = json_data['amount']
+    data = f'amount={amount}&ticket_id={ticket_id}&secret={secret}'
+    hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
+    data = f'?amount={amount}&ticket_id={ticket_id}&hash={hash_SHA1}'
+    link += data
     return link
 def get_JSON(ticket_id):
     secret = '123'

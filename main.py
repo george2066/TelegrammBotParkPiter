@@ -24,17 +24,6 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=secrets.TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-
-def get_kb(ticket_id):
-    kb = []
-    if not free_tariff(ticket_id):
-        kb = [
-            [InlineKeyboardButton(text="Оплатить", url=get_link_for_payed(ticket_id))],
-        ]
-    kb.append([InlineKeyboardButton(text="Назад", callback_data="back")])
-    keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
-    return keyboard
-
 @dp.message(CommandStart())
 async def check_payment(message: Message):
     kb = [
@@ -82,6 +71,15 @@ async def process_photo(message: Message):
             await message.answer(link, reply_markup=keyboard)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
+
+def get_kb(ticket_id):
+    kb = []
+    if not free_tariff(ticket_id):
+        kb.append([InlineKeyboardButton(text="Оплатить", url=get_link_for_payed(ticket_id))])
+    kb.append([InlineKeyboardButton(text="Назад", callback_data="back")])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
+    return keyboard
+
 @dp.message(F.text)
 async def process_ticket_id(message: Message):
     keyboard = get_kb(message.text)
@@ -95,6 +93,7 @@ async def process_ticket_id(message: Message):
             await message.answer(string, reply_markup=keyboard)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
+
 async def main() -> None:
     bot = Bot(token=secrets.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await dp.start_polling(bot)
