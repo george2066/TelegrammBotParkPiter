@@ -1,3 +1,4 @@
+import re
 import sys
 import logging
 
@@ -49,28 +50,42 @@ async def show_tariff(message: Message):
 @dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
 async def show_arrears(message: Message):
     await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
+
+
+
+
+
+
+
+
+
 @dp.message(F.photo)
 async def process_photo(message: Message):
     photo_data = message.photo[-1]
     file_id = photo_data.file_id
-    keyboard = get_kb()
 
     try:
         file = await bot.get_file(file_id)
         file_path = file.file_path
         image_data = await bot.download_file(file_path)
         image = Image.open(BytesIO(image_data.getvalue()))
-        link = read_QR(image)
-        start = link.find('[')
-        end = link.find(']')
-        ticket_id = link[start:end]
-
+        link =  read_QR(image)
+        ticket_id = re.findall(r"\[(.*?)\]", link)[0]
+        keyboard = get_kb(ticket_id)
         if free_tariff(ticket_id):
+            await message.answer(link)
             await check_payment(message)
-        else:
-            await message.answer(link, reply_markup=keyboard)
+            return
+        await message.answer(link, reply_markup=keyboard)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
+
+
+
+
+
+
+
 
 def get_kb(ticket_id):
     kb = []
