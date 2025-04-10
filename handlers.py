@@ -1,3 +1,6 @@
+import hashlib
+import json
+
 import requests
 
 from PIL import Image
@@ -89,3 +92,13 @@ def get_link_for_payed(ticket_id):
     hash_value = hash(ticket_id)
     link += f'/payment?ticket_id=[{ticket_id}]&amount={amount}&hash={hash_value}'
     return link
+def get_JSON(ticket_id):
+    secret = '123'
+    data = 'ticket_id=' + ticket_id.upper() + '&' + secret
+    hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
+    link = f'http://192.168.1.145:81/parking/parkapp/invoice?ticket_id={ticket_id}&hash={hash_SHA1}'
+    print(link)
+    response = requests.get(link)
+    data = response.content.decode('utf-8')
+    json_data = json.loads(data)
+    return json_data
