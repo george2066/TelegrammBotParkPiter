@@ -83,21 +83,6 @@ def free_tariff(ticket_id):
     trs = BeautifulSoup(requests.get(get_link(ticket_id)).text, 'html.parser').find_all('tr')
     return any('Бесплатное время' in tr.text for tr in trs)
 def get_parking(ticket_id: str):
-    """
-    Получает сумму оплаты парковки по ticket_id
-
-    Args:
-        ticket_id (str): Номер парковочного билета
-        secret (str): Секретный ключ для подписи (по умолчанию '123')
-        api_base (str): Базовый URL API (если None, используется стандартный)
-
-    Returns:
-        float: Сумма оплаты
-
-    Raises:
-        ValueError: Если не удалось получить сумму оплаты
-        ConnectionError: Если возникла ошибка соединения
-    """
     try:
         link = get_link(ticket_id)
         if exist_trs(link):
@@ -110,11 +95,10 @@ def get_parking(ticket_id: str):
         raise ConnectionError(f"Ошибка соединения с API: {str(e)}")
     except Exception as e:
         raise ValueError(f"Ошибка обработки данных: {str(e)}")
-def get_amount(link):
-    string = parsing_site(link)
-
-    for i in string.split('\n'):
-        if 'руб' in i:
-            return int(''.join(([digit for digit in i if digit.isdigit()])))
-    return 'У вас бесплатная парковка.'
+def get_amount(ticket_id):
+    json_data = get_JSON(get_link_JSON(ticket_id))
+    try:
+        return json_data['amount']
+    except KeyError as ke:
+        return 'У вас бесплатный проезд'
 
