@@ -50,15 +50,6 @@ async def show_tariff(message: Message):
 @dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
 async def show_arrears(message: Message):
     await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
-
-
-
-
-
-
-
-
-
 @dp.message(F.photo)
 async def process_photo(message: Message):
     photo_data = message.photo[-1]
@@ -79,22 +70,6 @@ async def process_photo(message: Message):
         await message.answer(link, reply_markup=keyboard)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
-
-
-
-
-
-
-
-
-def get_kb(ticket_id):
-    kb = []
-    if not free_tariff(ticket_id):
-        kb.append([InlineKeyboardButton(text="Оплатить", url=get_link_for_payed(ticket_id))])
-    kb.append([InlineKeyboardButton(text="Назад", callback_data="back")])
-    keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
-    return keyboard
-
 @dp.message(F.text)
 async def process_ticket_id(message: Message):
     keyboard = get_kb(message.text)
@@ -108,6 +83,14 @@ async def process_ticket_id(message: Message):
             await message.answer(string, reply_markup=keyboard)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
+
+def get_kb(ticket_id):
+    kb = []
+    if not free_tariff(ticket_id):
+        kb.append([InlineKeyboardButton(text="Оплатить", url=get_link_for_payed(ticket_id))])
+    kb.append([InlineKeyboardButton(text="Назад", callback_data="back")])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
+    return keyboard
 
 async def main() -> None:
     bot = Bot(token=secrets.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))

@@ -32,14 +32,13 @@ def get_link_JSON(ticket_id):
 def get_link_for_payed(ticket_id):
     json_data = get_JSON(get_link_JSON(ticket_id))
     secret = '123'
-    link = 'http://192.168.1.145:81/parking/parkapp/invoice'
+    link = 'http://192.168.1.145:81/parking/parkapp/device/command/open'
     amount = json_data['amount']
     data = f'amount={amount}&ticket_id={ticket_id}&secret={secret}'
     hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
     data = f'?amount={amount}&ticket_id={ticket_id}&hash={hash_SHA1}'
     link += data
     return link
-
 def parsing_site(link):
     response = requests.get(link)
     soup = BeautifulSoup(response.text, 'html.parser')
