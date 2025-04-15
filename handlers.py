@@ -17,8 +17,9 @@ client.close()
 
 json_error = 'Неверный идентификатор талона.\nПроверьте идентификатор талона и перепишите его сюда.'
 
-def get_JSON(link):
+def get_JSON(ticket_id):
     try:
+        link = get_link_JSON(ticket_id)
         json_data = requests.get(link).json()
         return json_data
     except JSONDecodeError as e:
@@ -33,7 +34,7 @@ def get_link_for_payed(ticket_id):
     json_data = get_JSON(get_link_JSON(ticket_id))
     secret = '123'
     link = 'http://192.168.1.145:81/parking/parkapp/device/command/open'
-    amount = json_data['amount']
+    amount = get_amount(ticket_id)
     data = f'amount={amount}&ticket_id={ticket_id}&secret={secret}'
     hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
     data = f'?amount={amount}&ticket_id={ticket_id}&hash={hash_SHA1}'
@@ -98,6 +99,6 @@ def get_amount(ticket_id):
     json_data = get_JSON(get_link_JSON(ticket_id))
     try:
         return json_data['amount']
-    except KeyError as ke:
+    except Exception as e:
         return 'У вас бесплатный проезд'
 

@@ -4,7 +4,7 @@ import logging
 
 import secrets
 
-from handlers import read_QR, get_parking, get_link_for_payed, free_tariff
+from handlers import read_QR, get_parking, get_link_for_payed, free_tariff, get_JSON, json_error
 from io import BytesIO
 
 import PIL.Image as Image
@@ -74,15 +74,22 @@ async def process_photo(message: Message):
 async def process_ticket_id(message: Message):
     keyboard = get_kb(message.text)
     ticket_id = message.text
-    try:
-        string = get_parking(ticket_id)
-        if free_tariff(ticket_id):
-            await message.answer(string)
-            await check_payment(message)
-        else:
-            await message.answer(string, reply_markup=keyboard)
-    except Exception as e:
-        await message.answer(f"Произошла ошибка: {str(e)}")
+    if keyboard != json_error:
+        try:
+            string = get_parking(ticket_id)
+            if free_tariff(ticket_id):
+                await message.answer(string)
+                await check_payment(message)
+            else:
+                if string == json_error:
+                    await message.answer(string)
+                    await check_payment(message)
+                else:
+                    await message.answer(string, reply_markup=keyboard)
+        except Exception as e:
+            await message.answer(f"Произошла ошибка: {str(e)}")
+    else:
+        await message.answer(json_error)
 
 def get_kb(ticket_id):
     kb = []
