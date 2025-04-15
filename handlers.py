@@ -65,6 +65,7 @@ def ticket_kb():
 def sendPhoto_kb():
     pass
 def read_QR(image: Image.Image) -> str:
+
     decoded_objects = decode(image)
     link = None
     for obj in decoded_objects:

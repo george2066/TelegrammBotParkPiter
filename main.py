@@ -60,7 +60,11 @@ async def process_photo(message: Message):
         file_path = file.file_path
         image_data = await bot.download_file(file_path)
         image = Image.open(BytesIO(image_data.getvalue()))
-        link =  read_QR(image)
+        try:
+            link =  read_QR(image)
+        except Exception as e:
+            await message.answer(json_error)
+            return
         ticket_id = re.findall(r"\[(.*?)\]", link)[0]
         keyboard = get_kb(ticket_id)
         if free_tariff(ticket_id):
