@@ -6,6 +6,7 @@ from json.decoder import JSONDecodeError
 import requests
 
 from PIL import Image
+from cv2 import VideoCapture, imwrite
 from pyzbar.pyzbar import decode
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from bs4 import BeautifulSoup
@@ -102,4 +103,14 @@ def get_amount(ticket_id):
         return json_data['amount']
     except Exception as e:
         return 'У вас бесплатный проезд'
-
+def get_photo_barrier():
+    ip_camera_url = 'rtsp://192.168.1.4/H264'
+    cap = VideoCapture(ip_camera_url)
+    if not cap.isOpened():
+        exit()
+    ret, frame = cap.read()
+    if ret:
+        imwrite('capture.jpg', frame)
+    else:
+        print("Не удалось захватить изображение.")
+    cap.release()
