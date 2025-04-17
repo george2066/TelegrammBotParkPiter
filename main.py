@@ -53,7 +53,7 @@ async def show_tariff(message: Message):
 async def show_arrears(message: Message):
     await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
 @dp.message(F.text == "Сфотографировать ШЛАГБАУМ")
-async def cmd_start(message: Message):
+async def show_photo_barrier(message: Message):
     get_photo_barrier()
     photo_file = FSInputFile(path='capture.jpg')
     msg_id = await message.answer_photo(photo=photo_file)
@@ -73,49 +73,40 @@ async def process_photo(message: Message):
         except Exception as e:
             await message.answer(json_error)
         ticket_id = re.findall(r"\[(.*?)\]", link)[0]
+        kb = []
+        if not free_tariff(ticket_id):
+            kb.append([InlineKeyboardButton(text="Оплатить", url=get_link_for_payed(ticket_id))])
+        keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
+        await handler_free_tariff(message, ticket_id, keyboard)
+    except Exception as e:
+        await message.answer(f"Произошла ошибка: {str(e)}")
+@dp.message(F.text)
+async def process_ticket_id(message: Message):
+    kb = []
+    ticket_id = message.text
+    if not free_tariff(ticket_id):
+        kb.append([InlineKeyboardButton(text="Оплатить", url=get_link_for_payed(ticket_id))])
+    kb.append([InlineKeyboardButton(text="Назад", callback_data="back")])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
+    if keyboard != json_error:
+        await handler_free_tariff(message, ticket_id, keyboard)
+    else:
+        await message.answer(json_error)
+
+async def handler_free_tariff(message: Message, ticket_id: str, keyboard: InlineKeyboardMarkup):
+    try:
         string = get_parking(ticket_id)
-        keyboard = get_kb(ticket_id)
         if free_tariff(ticket_id):
-            await message.answer(link)
+            await message.answer(string)
             await check_payment(message)
         else:
             if string == json_error:
                 await message.answer(string)
                 await check_payment(message)
             else:
-                print(keyboard)
                 await message.answer(string, reply_markup=keyboard)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
-@dp.message(F.text)
-async def process_ticket_id(message: Message):
-    keyboard = get_kb(message.text, 'Текст')
-    ticket_id = message.text
-    if keyboard != json_error:
-        try:
-            string = get_parking(ticket_id)
-            if free_tariff(ticket_id):
-                await message.answer(string)
-                await check_payment(message)
-            else:
-                if string == json_error:
-                    await message.answer(string)
-                    await check_payment(message)
-                else:
-                    await message.answer(string, reply_markup=keyboard)
-        except Exception as e:
-            await message.answer(f"Произошла ошибка: {str(e)}")
-    else:
-        await message.answer(json_error)
-
-def get_kb(ticket_id, data='Фото'):
-    kb = []
-    if not free_tariff(ticket_id):
-        kb.append([InlineKeyboardButton(text="Оплатить", url=get_link_for_payed(ticket_id))])
-    if data != 'Фото':
-        kb.append([InlineKeyboardButton(text="Назад", callback_data="back")])
-    keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
-    return keyboard
 
 async def main() -> None:
     bot = Bot(token=secret.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
