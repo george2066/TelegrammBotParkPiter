@@ -72,19 +72,24 @@ async def process_photo(message: Message):
             link =  read_QR(image)
         except Exception as e:
             await message.answer(json_error)
-            return
         ticket_id = re.findall(r"\[(.*?)\]", link)[0]
+        string = get_parking(ticket_id)
         keyboard = get_kb(ticket_id)
         if free_tariff(ticket_id):
             await message.answer(link)
             await check_payment(message)
-            return
-        await message.answer(link, reply_markup=keyboard)
+        else:
+            if string == json_error:
+                await message.answer(string)
+                await check_payment(message)
+            else:
+                print(keyboard)
+                await message.answer(string, reply_markup=keyboard)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
 @dp.message(F.text)
 async def process_ticket_id(message: Message):
-    keyboard = get_kb(message.text)
+    keyboard = get_kb(message.text, 'Текст')
     ticket_id = message.text
     if keyboard != json_error:
         try:
@@ -103,11 +108,12 @@ async def process_ticket_id(message: Message):
     else:
         await message.answer(json_error)
 
-def get_kb(ticket_id):
+def get_kb(ticket_id, data='Фото'):
     kb = []
     if not free_tariff(ticket_id):
         kb.append([InlineKeyboardButton(text="Оплатить", url=get_link_for_payed(ticket_id))])
-    kb.append([InlineKeyboardButton(text="Назад", callback_data="back")])
+    if data != 'Фото':
+        kb.append([InlineKeyboardButton(text="Назад", callback_data="back")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
     return keyboard
 
@@ -122,3 +128,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         print("Бот остановлен разработчиком")
+
