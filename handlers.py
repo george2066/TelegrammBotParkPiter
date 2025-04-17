@@ -94,7 +94,7 @@ def get_parking(ticket_id: str):
     except Exception as e:
         raise ValueError(f"Ошибка обработки данных: {str(e)}")
 def get_amount(ticket_id):
-    json_data = get_JSON(get_link_JSON(ticket_id))
+    json_data = get_JSON(ticket_id)
     try:
         return json_data['amount']
     except Exception as e:

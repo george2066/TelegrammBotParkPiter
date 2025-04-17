@@ -5,7 +5,7 @@ import logging
 
 import secret
 
-from handlers import read_QR, get_parking, get_link_for_payed, free_tariff, get_JSON, json_error, get_photo_barrier
+from handlers import read_QR, get_parking, get_link_for_payed, free_tariff, get_JSON, json_error
 from io import BytesIO
 
 import PIL.Image as Image
@@ -30,8 +30,7 @@ dp = Dispatcher(storage=MemoryStorage())
 async def check_payment(message: Message):
     kb = [
         [KeyboardButton(text="Показать ТАРИФ")],
-        [KeyboardButton(text="Показать ЗАДОЛЖЕННОСТЬ")],
-        [KeyboardButton(text="Сфотографировать ШЛАГБАУМ")]
+        [KeyboardButton(text="Показать ЗАДОЛЖЕННОСТЬ")]
     ]
     keyboard = ReplyKeyboardMarkup(keyboard=kb)
     await message.answer(f"{'Добро пожаловать!\n' if message.text == '/start' else ''}Выберете опцию:",
@@ -52,12 +51,6 @@ async def show_tariff(message: Message):
 @dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
 async def show_arrears(message: Message):
     await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
-@dp.message(F.text == "Сфотографировать ШЛАГБАУМ")
-async def show_photo_barrier(message: Message):
-    get_photo_barrier()
-    photo_file = FSInputFile(path='capture.jpg')
-    msg_id = await message.answer_photo(photo=photo_file)
-    os.remove('capture.jpg')
 @dp.message(F.photo)
 async def process_photo(message: Message):
     photo_data = message.photo[-1]
@@ -119,4 +112,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         print("Бот остановлен разработчиком")
-
