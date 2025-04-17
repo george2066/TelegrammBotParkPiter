@@ -31,14 +31,11 @@ def get_link_JSON(ticket_id):
     hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
     link = f'http://192.168.1.145:81/parking/parkapp/invoice?ticket_id={ticket_id}&hash={hash_SHA1}'
     return link
-def get_link_for_payed(ticket_id):
-    json_data = get_JSON(get_link_JSON(ticket_id))
-    secret = '123'
-    link = 'http://192.168.1.145:81/parking/parkapp/device/command/open'
-    amount = get_amount(ticket_id)
-    data = f'amount={amount}&ticket_id={ticket_id}&secret={secret}'
+def get_link_for_payed(client_id):
+    link = 'http://5.17.29.108:88/pub/pay'
+    data = f'id={client_id}'
     hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
-    data = f'?amount={amount}&ticket_id={ticket_id}&hash={hash_SHA1}'
+    data = f'?id={client_id}&hash={hash_SHA1}'
     link += data
     return link
 def parsing_site(link):
