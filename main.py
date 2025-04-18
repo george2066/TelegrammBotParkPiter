@@ -1,28 +1,35 @@
+import os
 import re
 import sys
 import logging
 
-import secrets
+import secret
 
-from handlers import read_QR, get_parking, get_link_for_payed, free_tariff
+from handlers import read_QR, get_parking, get_link_for_payed, free_tariff, get_JSON, json_error
 from io import BytesIO
 
 import PIL.Image as Image
 import asyncio
 import json.scanner
 
-from aiogram import Bot, Dispatcher, Router
 from aiogram import F
+from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
-from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
+from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, FSInputFile
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 
+'''
+cmd
+.venv\Scripts\activate.bat
+pythonw.exe main.py
+'''
+
 logging.basicConfig(level=logging.INFO)
 
-bot = Bot(token=secrets.TOKEN)
+bot = Bot(token=secret.TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 @dp.message(CommandStart())
@@ -60,40 +67,48 @@ async def process_photo(message: Message):
         file_path = file.file_path
         image_data = await bot.download_file(file_path)
         image = Image.open(BytesIO(image_data.getvalue()))
-        link =  read_QR(image)
+        try:
+            link =  read_QR(image)
+        except Exception as e:
+            await message.answer(json_error)
         ticket_id = re.findall(r"\[(.*?)\]", link)[0]
-        keyboard = get_kb(ticket_id)
-        if free_tariff(ticket_id):
-            await message.answer(link)
-            await check_payment(message)
-            return
-        await message.answer(link, reply_markup=keyboard)
+        kb = []
+        if not free_tariff(ticket_id):
+            kb.append([InlineKeyboardButton(text="Оплатить", url=get_link_for_payed(ticket_id))])
+        keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
+        await handler_free_tariff(message, ticket_id, keyboard)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
 @dp.message(F.text)
 async def process_ticket_id(message: Message):
-    keyboard = get_kb(message.text)
+    kb = []
     ticket_id = message.text
+    if not free_tariff(ticket_id):
+        kb.append([InlineKeyboardButton(text="Оплатить", url=get_link_for_payed(ticket_id))])
+    kb.append([InlineKeyboardButton(text="Назад", callback_data="back")])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
+    if keyboard != json_error:
+        await handler_free_tariff(message, ticket_id, keyboard)
+    else:
+        await message.answer(json_error)
+
+async def handler_free_tariff(message: Message, ticket_id: str, keyboard: InlineKeyboardMarkup):
     try:
         string = get_parking(ticket_id)
         if free_tariff(ticket_id):
             await message.answer(string)
             await check_payment(message)
         else:
-            await message.answer(string, reply_markup=keyboard)
+            if string == json_error:
+                await message.answer(string)
+                await check_payment(message)
+            else:
+                await message.answer(string, reply_markup=keyboard)
     except Exception as e:
         await message.answer(f"Произошла ошибка: {str(e)}")
 
-def get_kb(ticket_id):
-    kb = []
-    if not free_tariff(ticket_id):
-        kb.append([InlineKeyboardButton(text="Оплатить", url=get_link_for_payed(ticket_id))])
-    kb.append([InlineKeyboardButton(text="Назад", callback_data="back")])
-    keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
-    return keyboard
-
 async def main() -> None:
-    bot = Bot(token=secrets.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    bot = Bot(token=secret.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await dp.start_polling(bot)
 
 

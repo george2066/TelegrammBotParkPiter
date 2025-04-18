@@ -6,6 +6,7 @@ from json.decoder import JSONDecodeError
 import requests
 
 from PIL import Image
+from cv2 import VideoCapture, imwrite
 from pyzbar.pyzbar import decode
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from bs4 import BeautifulSoup
@@ -17,8 +18,9 @@ client.close()
 
 json_error = 'Неверный идентификатор талона.\nПроверьте идентификатор талона и перепишите его сюда.'
 
-def get_JSON(link):
+def get_JSON(ticket_id):
     try:
+        link = get_link_JSON(ticket_id)
         json_data = requests.get(link).json()
         return json_data
     except JSONDecodeError as e:
@@ -29,14 +31,11 @@ def get_link_JSON(ticket_id):
     hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
     link = f'http://192.168.1.145:81/parking/parkapp/invoice?ticket_id={ticket_id}&hash={hash_SHA1}'
     return link
-def get_link_for_payed(ticket_id):
-    json_data = get_JSON(get_link_JSON(ticket_id))
-    secret = '123'
-    link = 'http://192.168.1.145:81/parking/parkapp/device/command/open'
-    amount = json_data['amount']
-    data = f'amount={amount}&ticket_id={ticket_id}&secret={secret}'
+def get_link_for_payed(client_id):
+    link = 'http://5.17.29.108:88/pub/pay'
+    data = f'id={client_id}'
     hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
-    data = f'?amount={amount}&ticket_id={ticket_id}&hash={hash_SHA1}'
+    data = f'?id={client_id}&hash={hash_SHA1}'
     link += data
     return link
 def parsing_site(link):
@@ -95,9 +94,19 @@ def get_parking(ticket_id: str):
     except Exception as e:
         raise ValueError(f"Ошибка обработки данных: {str(e)}")
 def get_amount(ticket_id):
-    json_data = get_JSON(get_link_JSON(ticket_id))
+    json_data = get_JSON(ticket_id)
     try:
         return json_data['amount']
-    except KeyError as ke:
+    except Exception as e:
         return 'У вас бесплатный проезд'
-
+def get_photo_barrier():
+    ip_camera_url = 'rtsp://192.168.1.4/H264'
+    cap = VideoCapture(ip_camera_url)
+    if not cap.isOpened():
+        exit()
+    ret, frame = cap.read()
+    if ret:
+        imwrite('capture.jpg', frame)
+    else:
+        print("Не удалось захватить изображение.")
+    cap.release()
