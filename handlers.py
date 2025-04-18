@@ -67,6 +67,7 @@ def read_QR(image: Image.Image) -> str:
     link = None
     for obj in decoded_objects:
         link = obj.data.decode('utf-8')
+    link = get_link(link) if 'http' not in link else link
     return parsing_site(link)
 def get_link(ticket_id):
     base_url = 'http://195.239.22.157:48123/pub/pay?code='
