@@ -12,14 +12,20 @@ import PIL.Image as Image
 import asyncio
 import json.scanner
 
-from aiogram import Bot, Dispatcher, Router
 from aiogram import F
+from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, FSInputFile
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
+
+'''
+cmd
+.venv\Scripts\activate.bat
+pythonw.exe main.py
+'''
 
 logging.basicConfig(level=logging.INFO)
 
