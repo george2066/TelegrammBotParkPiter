@@ -9,3 +9,5 @@
 - ***poetry add bs4 opencv-python requests pillow aiogram pyzbar***
 - ***.venv\Scripts\activate.bat***
 - ***pythonw main.py***
+
+Если сделали что-то не то, то просто удалите созданные этими командами папки и файлы.

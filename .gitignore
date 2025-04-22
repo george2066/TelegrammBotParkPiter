@@ -3,3 +3,5 @@ __pycache__
 .idea
 secret.py
 .pytest_cache
+poetry.lock
+pyproject.toml
