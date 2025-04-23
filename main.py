@@ -35,7 +35,6 @@ dp = Dispatcher(storage=MemoryStorage())
 @dp.message(CommandStart())
 async def check_payment(message: Message):
     kb = [
-        [KeyboardButton(text="Показать ТАРИФ")],
         [KeyboardButton(text="Показать ЗАДОЛЖЕННОСТЬ")]
     ]
     keyboard = ReplyKeyboardMarkup(keyboard=kb)
@@ -45,15 +44,6 @@ async def check_payment(message: Message):
 async def back_handler(callback_query: CallbackQuery):
     await callback_query.answer()
     await check_payment(callback_query.message)
-@dp.message(F.text == "Показать ТАРИФ")
-async def show_tariff(message: Message):
-    await message.reply('''
-Тарифы:
-
-Цена ЧАС: ... руб.
-Цена ДЕНЬ: ... руб.
-Цена МЕСЯЦ: ... руб.
-    ''')
 @dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
 async def show_arrears(message: Message):
     await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
