@@ -117,22 +117,25 @@ async def process_ticket_id(message: Message):
 
 @dp.callback_query(lambda c: c.data == 'payed')
 async def pay_handler(callback_query: CallbackQuery):
-    query = callback_query.message.text
-    cost = float(query.split('\n')[5].split()[5])
-    await bot.delete_message(callback_query.from_user.id, callback_query.message.message_id)
-    await bot.send_invoice(
-        chat_id=callback_query.from_user.id,
-        title="parking_pay",
-        description="Оплатить парковку",
-        payload="payed",
-        provider_token=secret.TOKEN_PAYMENTS,
-        currency="RUB",
-        start_parameter="card_park_bot",
-        prices=[LabeledPrice(
-            label=f'Оплата {cost}',
-            amount=int(cost) * 100
-        )]
-    )
+    try:
+        query = callback_query.message.text
+        cost = float(query.split('\n')[5].split()[5])
+        await bot.delete_message(callback_query.from_user.id, callback_query.message.message_id)
+        await bot.send_invoice(
+            chat_id=callback_query.from_user.id,
+            title="parking_pay",
+            description="Оплатить парковку",
+            payload="payed",
+            provider_token=secret.TOKEN_PAYMENTS,
+            currency="RUB",
+            start_parameter="card_park_bot",
+            prices=[LabeledPrice(
+                label=f'Оплата {cost}',
+                amount=int(cost) * 100
+            )]
+        )
+    except Exception as e:
+        await callback_query.answer(text="Сумма дольжна быть не меньше 80 рублей.")
 
 
 @dp.pre_checkout_query()
