@@ -5,7 +5,8 @@ import logging
 
 import secret
 
-from handlers import read_QR, get_parking, get_link_for_payed, free_tariff, get_JSON, json_error
+from handlers import read_QR, get_parking, get_link_for_payed, free_tariff, json_error, get_file_path_to_photo, \
+    get_quantity_captures
 from io import BytesIO
 
 import PIL.Image as Image
@@ -33,19 +34,22 @@ payment_button = [InlineKeyboardButton(text="Оплатить", callback_data='p
 @dp.message(CommandStart())
 async def check_payment(message: Message):
     kb = [
-        [KeyboardButton(text="Показать ТАРИФ")],
-        [KeyboardButton(text="Показать ЗАДОЛЖЕННОСТЬ")]
+        [
+            KeyboardButton(text="Показать ТАРИФ"),
+            KeyboardButton(text="Показать ЗАДОЛЖЕННОСТЬ")
+        ],
+        [KeyboardButton(text="Сфотографировать ШЛАГБАУМ")]
     ]
     keyboard = ReplyKeyboardMarkup(keyboard=kb)
     await message.answer(f"{'Добро пожаловать!\n' if message.text == '/start' else ''}Выберете опцию:",
                          reply_markup=keyboard)
 
 
+
 @dp.callback_query(lambda c: c.data == 'back')
 async def back_handler(callback_query: CallbackQuery):
     await callback_query.answer()
     await check_payment(callback_query.message)
-
 
 @dp.message(F.text == "Показать ТАРИФ")
 async def show_tariff(message: Message):
@@ -57,11 +61,19 @@ async def show_tariff(message: Message):
 Цена МЕСЯЦ: ... руб.
     ''')
 
-
 @dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
 async def show_arrears(message: Message):
     await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
 
+@dp.message(F.text == "Сфотографировать ШЛАГБАУМ")
+async def choose_captures(message: Message):
+    try:
+        quantity_captures = get_quantity_captures()
+        kb = [[InlineKeyboardButton(text=f'Камера №{n + 1}', callback_data=f'camera_{n + 1}')] for n in range(quantity_captures)]
+        keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
+        await message.answer(text='Выберите камеру:', reply_markup=keyboard)
+    except Exception as e:
+        await message.answer(text=f'⚠️В драйвере отсутствуют камеры, подключённые к вашему компьютеру.⚠️\nОбратитесь за поддержкой в компанию CardPark:\nhttps://cardpark.su/\n\nОшибка:\n\n{e}')
 
 @dp.message(F.photo)
 async def process_photo(message: Message):
@@ -99,6 +111,17 @@ async def process_ticket_id(message: Message):
         await handler_free_tariff(message, ticket_id, keyboard)
     else:
         await message.answer(json_error)
+@dp.callback_query(lambda c: c.data == 'back')
+async def back_handler(callback_query: CallbackQuery):
+    await callback_query.answer()
+    await check_payment(callback_query.message)
+
+@dp.callback_query(lambda c: c.data and c.data.startswith('camera_'))
+async def show_photo(callback_query: CallbackQuery):
+    camera_number = int(callback_query.data.split('_')[1])
+    file_path = str(get_file_path_to_photo(camera_number))
+    photo = FSInputFile(path=file_path)
+    await callback_query.message.answer_photo(photo=photo)
 
 
 @dp.callback_query(lambda c: c.data == 'payed')
@@ -151,7 +174,6 @@ async def handler_free_tariff(message: Message, ticket_id: str, keyboard: Inline
 async def main() -> None:
     bot = Bot(token=secret.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await dp.start_polling(bot)
-
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)

@@ -11,12 +11,15 @@ from pyzbar.pyzbar import decode
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from bs4 import BeautifulSoup
 
+import secret
 
 client = socket.socket()
 client.connect(("192.168.1.145", 81))
 client.close()
 
-json_error = 'Неверный идентификатор талона.\nПроверьте идентификатор талона и перепишите его сюда.'
+json_error = '⛔️Неверный идентификатор талона.⛔️\nПроверьте идентификатор талона и перепишите его сюда.'
+link_endpoint = 'http://192.168.1.145:81/parking/parkapp'
+secret_word = secret.SECRET_WORD
 
 def get_JSON(ticket_id):
     try:
@@ -26,10 +29,9 @@ def get_JSON(ticket_id):
     except JSONDecodeError as e:
         return json_error
 def get_link_JSON(ticket_id):
-    secret = '123'
-    data = 'ticket_id=' + ticket_id.upper() + '&' + secret
+    data = 'ticket_id=' + ticket_id.upper() + '&' + secret_word
     hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
-    link = f'http://192.168.1.145:81/parking/parkapp/invoice?ticket_id={ticket_id}&hash={hash_SHA1}'
+    link = f'{link_endpoint}/invoice?ticket_id={ticket_id}&hash={hash_SHA1}'
     return link
 def get_link_for_payed(client_id):
     link = 'http://5.17.29.108:88/pub/pay'
@@ -100,14 +102,17 @@ def get_amount(ticket_id):
         return json_data['amount']
     except Exception as e:
         return 'У вас бесплатный проезд'
-def get_photo_barrier():
-    ip_camera_url = 'rtsp://192.168.1.4/H264'
-    cap = VideoCapture(ip_camera_url)
-    if not cap.isOpened():
-        exit()
-    ret, frame = cap.read()
-    if ret:
-        imwrite('capture.jpg', frame)
-    else:
-        print("Не удалось захватить изображение.")
-    cap.release()
+def get_file_path_to_photo(number: int):
+    camera = f'camera={number}'
+    data = f'{camera}&{secret_word}'
+    hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
+    link = f'{link_endpoint}/makephoto'
+    link = f'{link}?{camera}&hash={hash_SHA1}'
+    response = requests.post(link)
+    file_path = response.json()['file']
+    return file_path
+def get_quantity_captures():
+    link = link_endpoint + '/cameras'
+    response = requests.get(link)
+    json_data = response.json()
+    return len(json_data)
