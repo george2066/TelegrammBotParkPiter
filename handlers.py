@@ -108,11 +108,16 @@ def get_file_path_to_photo(number: int):
     hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
     link = f'{link_endpoint}/makephoto'
     link = f'{link}?{camera}&hash={hash_SHA1}'
+    print(link)
     response = requests.post(link)
     file_path = response.json()['file']
     return file_path
-def get_quantity_captures():
+def get_JSON_capture():
     link = link_endpoint + '/cameras'
     response = requests.get(link)
     json_data = response.json()
-    return len(json_data)
+    return json_data
+def get_names_capture():
+    json_data = get_JSON_capture()
+    names = [data['name'].split()[0] for data in json_data]
+    return names

@@ -8,7 +8,7 @@ import requests
 import secret
 
 from handlers import read_QR, get_parking, get_link_for_payed, free_tariff, json_error, get_file_path_to_photo, \
-    get_quantity_captures, get_JSON
+    get_names_capture, get_JSON
 from io import BytesIO
 
 import PIL.Image as Image
@@ -70,8 +70,10 @@ async def show_arrears(message: Message):
 @dp.message(F.text == "Сфотографировать ШЛАГБАУМ")
 async def choose_captures(message: Message):
     try:
-        quantity_captures = get_quantity_captures()
-        kb = [[InlineKeyboardButton(text=f'Камера №{n + 1}', callback_data=f'camera_{n + 1}')] for n in range(quantity_captures)]
+        names = get_names_capture()
+        quantity_capture = [n + 1 for n in range(len(names))]
+        print(quantity_capture)
+        kb = [[InlineKeyboardButton(text=f'Камера {name}', callback_data=f'camera_{n}')] for name, n in zip(names, quantity_capture)]
         keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
         await message.answer(text='Выберите камеру:', reply_markup=keyboard)
     except Exception as e:
@@ -119,6 +121,7 @@ async def back_handler(callback_query: CallbackQuery):
 @dp.callback_query(lambda c: c.data and c.data.startswith('camera_'))
 async def show_photo(callback_query: CallbackQuery):
     try:
+        print(callback_query.data)
         camera_number = int(callback_query.data.split('_')[1])
         file_path = str(get_file_path_to_photo(camera_number))
         photo = FSInputFile(path=file_path)
