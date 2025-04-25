@@ -7,7 +7,11 @@
 - ***pip install poetry***
 
 (теперь переходите в файл вашего бота)
-- Сделайте файл ***secrets.py*** и сохраните туда ***TOKEN*** вашего бота.
+- Сделайте файл ***secrets.py*** и сохраните туда:
+  - ***TOKEN*** вашего бота.
+  - ***API_KEY*** ключ
+  - ***SHOP_ID*** вашего магазина
+  - ***TOKEN_PAYMENTS*** вашей оплаты
 - ***python -m venv .venv***
 - ***poetry init***
 - ***poetry add bs4 opencv-python requests pillow aiogram pyzbar***
