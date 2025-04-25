@@ -10,7 +10,6 @@ from io import BytesIO
 
 import PIL.Image as Image
 import asyncio
-import json.scanner
 
 from aiogram import F
 from aiogram import Bot, Dispatcher, Router
@@ -102,25 +101,11 @@ async def process_ticket_id(message: Message):
         await message.answer(json_error)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 @dp.callback_query(lambda c: c.data == 'payed')
 async def pay_handler(callback_query: CallbackQuery):
     try:
         query = callback_query.message.text
         cost = float(query.split('\n')[5].split()[5])
-        await bot.delete_message(callback_query.from_user.id, callback_query.message.message_id)
         await bot.send_invoice(
             chat_id=callback_query.from_user.id,
             title="parking_pay",
@@ -135,7 +120,7 @@ async def pay_handler(callback_query: CallbackQuery):
             )]
         )
     except Exception as e:
-        await callback_query.answer(text="Сумма дольжна быть не меньше 80 рублей.")
+        await callback_query.answer(text="Сумма должна быть не меньше 80 рублей.")
 
 
 @dp.pre_checkout_query()
@@ -146,24 +131,6 @@ async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
 @dp.callback_query(lambda message: message.successful_payment.invoice_payload == 'payed')
 async def process_pay(message: Message):
     await message.answer(text='Вы оплатили парковку!')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 async def handler_free_tariff(message: Message, ticket_id: str, keyboard: InlineKeyboardMarkup):
     try:
