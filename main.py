@@ -3,10 +3,12 @@ import re
 import sys
 import logging
 
+import requests
+
 import secret
 
 from handlers import read_QR, get_parking, get_link_for_payed, free_tariff, json_error, get_file_path_to_photo, \
-    get_quantity_captures
+    get_quantity_captures, get_JSON
 from io import BytesIO
 
 import PIL.Image as Image
@@ -111,6 +113,7 @@ async def process_ticket_id(message: Message):
         await handler_free_tariff(message, ticket_id, keyboard)
     else:
         await message.answer(json_error)
+
 @dp.callback_query(lambda c: c.data == 'back')
 async def back_handler(callback_query: CallbackQuery):
     await callback_query.answer()
@@ -118,17 +121,22 @@ async def back_handler(callback_query: CallbackQuery):
 
 @dp.callback_query(lambda c: c.data and c.data.startswith('camera_'))
 async def show_photo(callback_query: CallbackQuery):
-    camera_number = int(callback_query.data.split('_')[1])
-    file_path = str(get_file_path_to_photo(camera_number))
-    photo = FSInputFile(path=file_path)
-    await callback_query.message.answer_photo(photo=photo)
+    try:
+        camera_number = int(callback_query.data.split('_')[1])
+        file_path = str(get_file_path_to_photo(camera_number))
+        photo = FSInputFile(path=file_path)
+        await callback_query.message.answer_photo(photo=photo)
+    except Exception as e:
+        await callback_query.message.answer(text=f'Наверное, камеры либо нет, либо она не прописалась в драйвере🤷‍\n\n️{e}')
 
 
 @dp.callback_query(lambda c: c.data == 'payed')
 async def pay_handler(callback_query: CallbackQuery):
     try:
         query = callback_query.message.text
-        cost = float(query.split('\n')[5].split()[5])
+        ticket_id = [el for el in query.split('\n') if 'Штрих-код: ' in el][0].split()[1]
+        json_data = get_JSON(ticket_id)
+        cost = json_data['amount']
         await bot.send_invoice(
             chat_id=callback_query.from_user.id,
             title="parking_pay",
@@ -139,11 +147,11 @@ async def pay_handler(callback_query: CallbackQuery):
             start_parameter="card_park_bot",
             prices=[LabeledPrice(
                 label=f'Оплата {cost}',
-                amount=int(cost) * 100
+                amount=int(cost * 100)
             )]
         )
     except Exception as e:
-        await callback_query.answer(text="Сумма должна быть не меньше 80 рублей.")
+        await callback_query.answer(text="Сумма должна быть не меньше 80 рублей." + '\n' + str(e))
 
 
 @dp.pre_checkout_query()

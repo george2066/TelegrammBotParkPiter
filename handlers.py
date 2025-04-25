@@ -90,7 +90,7 @@ def get_parking(ticket_id: str):
             string = parsing_site(link)
 
             return string
-        return 'Неверный идентификатор талона.\nПроверьте идентификатор талона и перепишите его сюда.'
+        return json_error
 
     except requests.RequestException as e:
         raise ConnectionError(f"Ошибка соединения с API: {str(e)}")
