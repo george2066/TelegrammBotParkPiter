@@ -87,10 +87,7 @@ async def process_photo(message: Message):
         file_path = file.file_path
         image_data = await bot.download_file(file_path)
         image = Image.open(BytesIO(image_data.getvalue()))
-        try:
-            link = read_QR(image)
-        except Exception as e:
-            await message.answer(json_error)
+        link = read_QR(image)
         ticket_id = re.findall(r"\[(.*?)\]", link)[0]
         kb = []
         if not free_tariff(ticket_id):
@@ -98,7 +95,7 @@ async def process_photo(message: Message):
         keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
         await handler_free_tariff(message, ticket_id, keyboard)
     except Exception as e:
-        await message.answer(f"Произошла ошибка: {str(e)}")
+        await message.answer(f"{json_error}\n\nОшибка:\n {str(e)}")
 
 
 @dp.message(F.text)
@@ -151,7 +148,7 @@ async def pay_handler(callback_query: CallbackQuery):
             )]
         )
     except Exception as e:
-        await callback_query.answer(text="Сумма должна быть не меньше 80 рублей." + '\n' + str(e))
+        await callback_query.answer(text="Сумма должна быть не меньше 80 рублей.")
 
 
 @dp.pre_checkout_query()
