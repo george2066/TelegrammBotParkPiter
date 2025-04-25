@@ -49,6 +49,12 @@ async def show_tariff(message: Message):
 Цена ДЕНЬ: ... руб.
 Цена МЕСЯЦ: ... руб.
     ''')
+
+@dp.callback_query(lambda c: c.data == 'back')
+async def back_handler(callback_query: CallbackQuery):
+    await callback_query.answer()
+    await check_payment(callback_query.message)
+
 @dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
 async def show_arrears(message: Message):
     await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
