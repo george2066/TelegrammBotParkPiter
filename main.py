@@ -1,14 +1,11 @@
-import os
 import re
 import sys
 import logging
 
-import requests
-
 import secret
 
-from handlers import read_QR, get_parking, get_link_for_payed, free_tariff, json_error, get_file_path_to_photo, \
-    get_names_capture, get_JSON
+from handlers import read_QR, get_parking, free_tariff, json_error, get_file_path_to_photo, \
+    get_names_capture, get_JSON, get_description_tariff
 from io import BytesIO
 
 import PIL.Image as Image
@@ -23,6 +20,12 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.types.pre_checkout_query import PreCheckoutQuery
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
+
+class Form(StatesGroup):
+    waiting_ticket_id_for_tariff = State()
+    waiting_ticket_id_for_arrears = State()
 
 logging.basicConfig(level=logging.INFO)
 
@@ -54,17 +57,44 @@ async def back_handler(callback_query: CallbackQuery):
     await check_payment(callback_query.message)
 
 @dp.message(F.text == "Показать ТАРИФ")
-async def show_tariff(message: Message):
-    await message.reply('''
-Тарифы:
+async def show_tariff(message: Message, state: FSMContext):
+    await state.set_state(Form.waiting_ticket_id_for_tariff)
+    await message.reply('Пожалуйста, введите код вашего талона или сфотографируйте QR-код.')
 
-Цена ЧАС: ... руб.
-Цена ДЕНЬ: ... руб.
-Цена МЕСЯЦ: ... руб.
-    ''')
+
+@dp.message(F.text, Form.waiting_ticket_id_for_tariff)
+async def process_ticket_id_tariff(message: Message, state: FSMContext):
+    await state.update_data(ticket_id=message.text)
+    ticket_id = await state.get_data()
+    ticket_id = ticket_id['ticket_id']
+    description = get_description_tariff(ticket_id=ticket_id)
+    await message.answer(text=description)
+    await check_payment(message)
+    await state.clear()
+
+@dp.message(F.photo, Form.waiting_ticket_id_for_tariff)
+async def process_photo_tariff(message: Message, state: FSMContext):
+    photo_data = await state.update_data(photo=message.photo[-1])
+    photo_data = photo_data['photo']
+    file_id = photo_data.file_id
+
+    try:
+        file = await bot.get_file(file_id)
+        file_path = file.file_path
+        image_data = await bot.download_file(file_path)
+        image = Image.open(BytesIO(image_data.getvalue()))
+        link = read_QR(image)
+        ticket_id = re.findall(r"\[(.*?)\]", link)[0]
+        description = get_description_tariff(ticket_id=ticket_id)
+        await message.answer(text=description)
+    except Exception as e:
+        await message.answer(f"{json_error}\n\nОшибка:\n {str(e)}")
+    finally:
+        await state.clear()
 
 @dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
-async def show_arrears(message: Message):
+async def show_arrears(message: Message, state: FSMContext):
+    await state.set_state(Form.waiting_ticket_id_for_arrears)
     await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
 
 @dp.message(F.text == "Сфотографировать ШЛАГБАУМ")
@@ -79,9 +109,27 @@ async def choose_captures(message: Message):
     except Exception as e:
         await message.answer(text=f'⚠️В драйвере отсутствуют камеры, подключённые к вашему компьютеру.⚠️\nОбратитесь за поддержкой в компанию CardPark:\nhttps://cardpark.su/\n\nОшибка:\n\n{e}')
 
-@dp.message(F.photo)
-async def process_photo(message: Message):
-    photo_data = message.photo[-1]
+
+@dp.message(F.text, Form.waiting_ticket_id_for_arrears)
+async def process_ticket_id_arrears(message: Message, state: FSMContext):
+    await state.update_data(ticket_id=message.text)
+    ticket_id = await state.get_data()
+    ticket_id = ticket_id['ticket_id']
+    kb = []
+    if not free_tariff(ticket_id):
+        kb.append(payment_button)
+    kb.append([InlineKeyboardButton(text="Назад", callback_data="back")])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
+    if keyboard != json_error:
+        await handler_free_tariff(message, ticket_id, keyboard)
+    else:
+        await message.answer(json_error)
+    await state.clear()
+
+@dp.message(F.photo, Form.waiting_ticket_id_for_arrears)
+async def process_photo_arrears(message: Message, state: FSMContext):
+    photo_data = await state.update_data(photo=message.photo[-1])
+    photo_data = photo_data['photo']
     file_id = photo_data.file_id
 
     try:
@@ -98,20 +146,8 @@ async def process_photo(message: Message):
         await handler_free_tariff(message, ticket_id, keyboard)
     except Exception as e:
         await message.answer(f"{json_error}\n\nОшибка:\n {str(e)}")
-
-
-@dp.message(F.text)
-async def process_ticket_id(message: Message):
-    kb = []
-    ticket_id = message.text
-    if not free_tariff(ticket_id):
-        kb.append(payment_button)
-    kb.append([InlineKeyboardButton(text="Назад", callback_data="back")])
-    keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
-    if keyboard != json_error:
-        await handler_free_tariff(message, ticket_id, keyboard)
-    else:
-        await message.answer(json_error)
+    finally:
+        await state.clear()
 
 @dp.callback_query(lambda c: c.data == 'back')
 async def back_handler(callback_query: CallbackQuery):

@@ -121,3 +121,13 @@ def get_names_capture():
     json_data = get_JSON_capture()
     names = [data['name'].split()[0] for data in json_data]
     return names
+def get_description_tariff(ticket_id):
+    tariff = get_JSON(ticket_id)['tariff_name']
+    link = link_endpoint + '/tariffs'
+    response = requests.get(link)
+    json_data = response.json()
+    tariff_description = [el for el in json_data if el['name'] == tariff][0]['description']
+    if tariff_description == '':
+        return 'Нет описания'
+    else:
+        return tariff_description
