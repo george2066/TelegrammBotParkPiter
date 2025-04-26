@@ -64,13 +64,18 @@ async def show_tariff(message: Message, state: FSMContext):
 
 @dp.message(F.text, Form.waiting_ticket_id_for_tariff)
 async def process_ticket_id_tariff(message: Message, state: FSMContext):
-    await state.update_data(ticket_id=message.text)
-    ticket_id = await state.get_data()
-    ticket_id = ticket_id['ticket_id']
-    description = get_description_tariff(ticket_id=ticket_id)
-    await message.answer(text=description)
-    await check_payment(message)
-    await state.clear()
+    try:
+        await state.update_data(ticket_id=message.text)
+        ticket_id = await state.get_data()
+        ticket_id = ticket_id['ticket_id']
+        description = get_description_tariff(ticket_id=ticket_id)
+        await message.answer(text=description)
+        await check_payment(message)
+    except Exception as e:
+        await message.answer(text=json_error)
+        await check_payment(message)
+    finally:
+        await state.clear()
 
 @dp.message(F.photo, Form.waiting_ticket_id_for_tariff)
 async def process_photo_tariff(message: Message, state: FSMContext):
