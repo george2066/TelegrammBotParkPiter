@@ -1,7 +1,6 @@
 import re
 import sys
 import logging
-
 import secret
 
 from handlers import read_QR, get_parking, free_tariff, json_error, get_file_path_to_photo, \
@@ -17,7 +16,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, LabeledPrice, FSInputFile
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.enums import ParseMode
+from aiogram.enums import ParseMode, ContentType
 from aiogram.client.default import DefaultBotProperties
 from aiogram.types.pre_checkout_query import PreCheckoutQuery
 from aiogram.fsm.state import State, StatesGroup
@@ -35,7 +34,6 @@ dp = Dispatcher(storage=MemoryStorage())
 
 payment_button = [InlineKeyboardButton(text="Оплатить", callback_data='payed')]
 
-
 @dp.message(CommandStart())
 async def check_payment(message: Message):
     kb = [
@@ -48,8 +46,6 @@ async def check_payment(message: Message):
     keyboard = ReplyKeyboardMarkup(keyboard=kb)
     await message.answer(f"{'Добро пожаловать!\n' if message.text == '/start' else ''}Выберете опцию:",
                          reply_markup=keyboard)
-
-
 
 @dp.callback_query(lambda c: c.data == 'back')
 async def back_handler(callback_query: CallbackQuery):
@@ -107,7 +103,6 @@ async def choose_captures(message: Message):
     try:
         names = get_names_capture()
         quantity_capture = [n + 1 for n in range(len(names))]
-        print(quantity_capture)
         kb = [[InlineKeyboardButton(text=f'Камера {name}', callback_data=f'camera_{n}')] for name, n in zip(names, quantity_capture)]
         keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
         await message.answer(text='Выберите камеру:', reply_markup=keyboard)
@@ -159,50 +154,50 @@ async def back_handler(callback_query: CallbackQuery):
     await callback_query.answer()
     await check_payment(callback_query.message)
 
+@dp.callback_query(lambda c: c.data == 'payed')
+async def process_payed(call: CallbackQuery):
+    try:
+        query = call.message.text
+        ticket_id = [el for el in query.split('\n') if 'Штрих-код: ' in el][0].split()[1]
+        json_data = get_JSON(ticket_id)
+        cost = json_data['amount']
+        await bot.send_invoice(
+            chat_id=call.from_user.id,
+            title='Оплатите парковку',
+            description=f'С вас {cost} рублей',
+            payload='payed_ok',
+            provider_token=secret.TOKEN_PAYMENTS,
+            currency='RUB',
+            start_parameter='card_bot',
+            prices=[LabeledPrice(
+                label=f'Оплата {cost}',
+                amount=int(cost * 100)
+            )]
+        )
+        await bot.delete_message(call.from_user.id, call.message.message_id)
+    except Exception as e:
+        await call.answer(text="Сумма должна быть не меньше 80 рублей, чтобы оплатить через Telegram-бота.")
+
+
+@dp.pre_checkout_query()
+async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+@dp.message(F.content_type.in_(['successful_payment']))
+async def successful_pay(message: Message):
+    if  message.successful_payment.invoice_payload == 'payed_ok':
+        await message.answer(text='Вы оплатили парковку.')
+    await check_payment(message)
+
 @dp.callback_query(lambda c: c.data and c.data.startswith('camera_'))
 async def show_photo(callback_query: CallbackQuery):
     try:
-        print(callback_query.data)
         camera_number = int(callback_query.data.split('_')[1])
         file_path = str(get_file_path_to_photo(camera_number))
         photo = FSInputFile(path=file_path)
         await callback_query.message.answer_photo(photo=photo)
     except Exception as e:
         await callback_query.message.answer(text=f'Наверное, камеры либо нет, либо она не прописалась в драйвере🤷‍\n\n️{e}')
-
-
-@dp.callback_query(lambda c: c.data == 'payed')
-async def pay_handler(callback_query: CallbackQuery):
-    try:
-        query = callback_query.message.text
-        ticket_id = [el for el in query.split('\n') if 'Штрих-код: ' in el][0].split()[1]
-        json_data = get_JSON(ticket_id)
-        cost = json_data['amount']
-        await bot.send_invoice(
-            chat_id=callback_query.from_user.id,
-            title="parking_pay",
-            description="Оплатить парковку",
-            payload="payed",
-            provider_token=secret.TOKEN_PAYMENTS,
-            currency="RUB",
-            start_parameter="card_park_bot",
-            prices=[LabeledPrice(
-                label=f'Оплата {cost}',
-                amount=int(cost * 100)
-            )]
-        )
-    except Exception as e:
-        await callback_query.answer(text="Сумма должна быть не меньше 80 рублей.")
-
-
-@dp.pre_checkout_query()
-async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
-    await bot.answer_pre_checkout_query(pre_checkout_query_id=pre_checkout_query.id, ok=True)
-
-
-@dp.callback_query(lambda message: message.successful_payment.invoice_payload == 'payed')
-async def process_pay(message: Message):
-    await message.answer(text='Вы оплатили парковку!')
 
 async def handler_free_tariff(message: Message, ticket_id: str, keyboard: InlineKeyboardMarkup):
     try:
@@ -228,5 +223,5 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     try:
         asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        print("Бот остановлен разработчиком")
+    except (KeyboardInterrupt, SystemExit) as e:
+        print(f"Бот остановлен разработчиком: {e}")

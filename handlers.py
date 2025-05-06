@@ -1,6 +1,7 @@
 import hashlib
 import json
 import socket
+import time
 from json.decoder import JSONDecodeError
 
 import requests
@@ -57,13 +58,7 @@ def quantity_tr(link):
     return len(trs)
 def exist_trs(link):
     return quantity_tr(link) > 0
-def ticket_kb():
-    keyboard=ReplyKeyboardMarkup(keyboard =[
-        [KeyboardButton(text='Ввести номер')]
-    ], resize_keyboard=True)
-    return keyboard
-def sendPhoto_kb():
-    pass
+
 def read_QR(image: Image.Image) -> str:
     decoded_objects = decode(image)
     link = None
@@ -108,9 +103,10 @@ def get_file_path_to_photo(number: int):
     hash_SHA1 = hashlib.sha1(data.encode('utf-8')).hexdigest()
     link = f'{link_endpoint}/makephoto'
     link = f'{link}?{camera}&hash={hash_SHA1}'
-    print(link)
     response = requests.post(link)
-    file_path = response.json()['file']
+    json_data = response.json()
+    file_path = json_data['file']
+    time.sleep(1)
     return file_path
 def get_JSON_capture():
     link = link_endpoint + '/cameras'
@@ -130,4 +126,4 @@ def get_description_tariff(ticket_id):
     if tariff_description == '':
         return 'Нет описания'
     else:
-        return tariff_description
+        return tariff + ':\n' + tariff_description
