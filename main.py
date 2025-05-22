@@ -31,6 +31,7 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=secret.TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
+error = lambda e: str(e)[:str(e).index('https')] if 'https' in str(e) else e
 
 payment_button = [InlineKeyboardButton(text="Оплатить", callback_data='payed')]
 
@@ -46,18 +47,14 @@ async def check_payment(message: Message):
     keyboard = ReplyKeyboardMarkup(keyboard=kb)
     await message.answer(f"{'Добро пожаловать!\n' if message.text == '/start' else ''}Выберете опцию:",
                          reply_markup=keyboard)
-
 @dp.callback_query(lambda c: c.data == 'back')
 async def back_handler(callback_query: CallbackQuery):
     await callback_query.answer()
     await check_payment(callback_query.message)
-
 @dp.message(F.text == "Показать ТАРИФ")
 async def show_tariff(message: Message, state: FSMContext):
     await state.set_state(Form.waiting_ticket_id_for_tariff)
     await message.reply('Пожалуйста, введите код вашего талона или сфотографируйте QR-код.')
-
-
 @dp.message(F.text, Form.waiting_ticket_id_for_tariff)
 async def process_ticket_id_tariff(message: Message, state: FSMContext):
     try:
@@ -68,11 +65,10 @@ async def process_ticket_id_tariff(message: Message, state: FSMContext):
         await message.answer(text=description)
         await check_payment(message)
     except Exception as e:
-        await message.answer(text=json_error)
+        await message.answer(text=error(json_error))
         await check_payment(message)
     finally:
         await state.clear()
-
 @dp.message(F.photo, Form.waiting_ticket_id_for_tariff)
 async def process_photo_tariff(message: Message, state: FSMContext):
     photo_data = await state.update_data(photo=message.photo[-1])
@@ -89,15 +85,13 @@ async def process_photo_tariff(message: Message, state: FSMContext):
         description = get_description_tariff(ticket_id=ticket_id)
         await message.answer(text=description)
     except Exception as e:
-        await message.answer(f"{json_error}\n\nОшибка:\n {str(e)}")
+        await message.answer(f"{json_error}\n\nОшибка:\n {error(e)}")
     finally:
         await state.clear()
-
 @dp.message(F.text == "Показать ЗАДОЛЖЕННОСТЬ")
 async def show_arrears(message: Message, state: FSMContext):
     await state.set_state(Form.waiting_ticket_id_for_arrears)
     await message.reply("Пожалуйста, введите код для проверки оплаты или пришлите QR-код вашего талона.")
-
 @dp.message(F.text == "Сфотографировать ШЛАГБАУМ")
 async def choose_captures(message: Message):
     try:
@@ -107,9 +101,7 @@ async def choose_captures(message: Message):
         keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
         await message.answer(text='Выберите камеру:', reply_markup=keyboard)
     except Exception as e:
-        await message.answer(text=f'⚠️В драйвере отсутствуют камеры, подключённые к вашему компьютеру.⚠️\nОбратитесь за поддержкой в компанию CardPark:\nhttps://cardpark.su/\n\nОшибка:\n\n{e}')
-
-
+        await message.answer(text=f'⚠️В драйвере отсутствуют камеры, подключённые к вашему компьютеру.⚠️\nОбратитесь за поддержкой в компанию CardPark:\nhttps://cardpark.su/\n\nОшибка:\n\n{error(e)}')
 @dp.message(F.text, Form.waiting_ticket_id_for_arrears)
 async def process_ticket_id_arrears(message: Message, state: FSMContext):
     await state.update_data(ticket_id=message.text)
@@ -123,9 +115,8 @@ async def process_ticket_id_arrears(message: Message, state: FSMContext):
     if keyboard != json_error:
         await handler_free_tariff(message, ticket_id, keyboard)
     else:
-        await message.answer(json_error)
+        await message.answer(error(json_error))
     await state.clear()
-
 @dp.message(F.photo, Form.waiting_ticket_id_for_arrears)
 async def process_photo_arrears(message: Message, state: FSMContext):
     photo_data = await state.update_data(photo=message.photo[-1])
@@ -145,15 +136,13 @@ async def process_photo_arrears(message: Message, state: FSMContext):
         keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
         await handler_free_tariff(message, ticket_id, keyboard)
     except Exception as e:
-        await message.answer(f"{json_error}\n\nОшибка:\n {str(e)}")
+        await message.answer(f"{json_error}\n\nОшибка:\n {error(e)}")
     finally:
         await state.clear()
-
 @dp.callback_query(lambda c: c.data == 'back')
 async def back_handler(callback_query: CallbackQuery):
     await callback_query.answer()
     await check_payment(callback_query.message)
-
 @dp.callback_query(lambda c: c.data == 'payed')
 async def process_payed(call: CallbackQuery):
     try:
@@ -176,19 +165,15 @@ async def process_payed(call: CallbackQuery):
         )
         await bot.delete_message(call.from_user.id, call.message.message_id)
     except Exception as e:
-        await call.answer(text="Сумма должна быть не меньше 80 рублей, чтобы оплатить через Telegram-бота.")
-
-
+        await call.answer(text=f"Сумма должна быть не меньше 80 рублей, чтобы оплатить через Telegram-бота.\n\n{error(e)}")
 @dp.pre_checkout_query()
 async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
-
 @dp.message(F.content_type.in_(['successful_payment']))
 async def successful_pay(message: Message):
     if  message.successful_payment.invoice_payload == 'payed_ok':
         await message.answer(text='Вы оплатили парковку.')
     await check_payment(message)
-
 @dp.callback_query(lambda c: c.data and c.data.startswith('camera_'))
 async def show_photo(callback_query: CallbackQuery):
     try:
@@ -197,8 +182,7 @@ async def show_photo(callback_query: CallbackQuery):
         photo = FSInputFile(path=file_path)
         await callback_query.message.answer_photo(photo=photo)
     except Exception as e:
-        await callback_query.message.answer(text=f'Наверное, камеры либо нет, либо она не прописалась в драйвере🤷‍\n\n️{e}')
-
+        await callback_query.message.answer(text=f'Наверное, камеры либо нет, либо она не прописалась в драйвере🤷‍\n\n️{error(e)}')
 async def handler_free_tariff(message: Message, ticket_id: str, keyboard: InlineKeyboardMarkup):
     try:
         string = get_parking(ticket_id)
@@ -212,7 +196,8 @@ async def handler_free_tariff(message: Message, ticket_id: str, keyboard: Inline
             else:
                 await message.answer(string, reply_markup=keyboard)
     except Exception as e:
-        await message.answer(f"Произошла ошибка: {str(e)}")
+        string = f"Произошла ошибка {error(e)}"
+        await message.answer(string)
 
 
 async def main() -> None:
